@@ -48,10 +48,35 @@ export async function loadDatabase(
     const path = await import("path")
     const fs = await import("fs/promises")
 
-    // In a Vercel environment, process.cwd() points to the root of the deployment.
-    // The postinstall script copies the wasm file to the `public` directory.
-    const wasmPath = path.resolve(process.cwd(), "./public/sql-wasm.wasm")
-    const wasmBinaryBuffer = await fs.readFile(wasmPath)
+    // Try multiple paths for WASM file location
+    // 1. First try node_modules (always available in Vercel serverless)
+    // 2. Then try public directory (for local development)
+    // 3. Finally try current working directory
+    const possiblePaths = [
+      path.resolve(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm"),
+      path.resolve(process.cwd(), "./public/sql-wasm.wasm"),
+      path.resolve(process.cwd(), "sql-wasm.wasm"),
+    ]
+
+    let wasmBinaryBuffer: Buffer | null = null
+    let lastError: Error | null = null
+
+    for (const wasmPath of possiblePaths) {
+      try {
+        wasmBinaryBuffer = await fs.readFile(wasmPath)
+        break // Successfully read the file
+      } catch (err) {
+        lastError = err as Error
+        // Continue to next path
+      }
+    }
+
+    if (!wasmBinaryBuffer) {
+      throw new Error(
+        `Failed to find sql-wasm.wasm. Tried: ${possiblePaths.join(", ")}. Last error: ${lastError?.message}`
+      )
+    }
+
     // Convert Buffer to ArrayBuffer for sql.js
     const wasmArrayBuffer = wasmBinaryBuffer.buffer.slice(
       wasmBinaryBuffer.byteOffset,
@@ -64,7 +89,7 @@ export async function loadDatabase(
     // Add more context for debugging wasm file loading issues.
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       throw new Error(
-        "Failed to load sql-wasm.wasm. Ensure it's in the `public` directory."
+        "Failed to load sql-wasm.wasm. Ensure sql.js is installed and the WASM file is available."
       )
     }
     throw new Error(
