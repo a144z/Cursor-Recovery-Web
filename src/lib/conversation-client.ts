@@ -37,12 +37,14 @@ const CONVERSATION_KEYS = [
 // =================================================================================
 
 // Cache for sql.js initialization
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sqlJsPromise: Promise<any> | null = null
 
 /**
  * Initializes sql.js in the browser by loading the WASM file.
  * This is cached so we only load it once.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function initSqlJsBrowser(): Promise<any> {
   if (sqlJsPromise) {
     return sqlJsPromise
