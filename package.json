@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "node -e \"require('fs').copyFileSync('node_modules/sql.js/dist/sql-wasm.wasm', 'public/sql-wasm.wasm')\""
+    "postinstall": "node -e \"const fs = require('fs'); const path = require('path'); const sqlJsPath = require.resolve('sql.js'); const sqlJsDir = path.dirname(sqlJsPath); fs.copyFileSync(path.join(sqlJsDir, '../dist/sql-wasm.wasm'), path.join(__dirname, 'src/lib/sql-wasm.wasm'));\""
   },
   "dependencies": {
     "@radix-ui/react-scroll-area": "^1.2.10",
