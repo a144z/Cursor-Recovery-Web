@@ -37,13 +37,13 @@ const CONVERSATION_KEYS = [
 // =================================================================================
 
 // Cache for sql.js initialization
-let sqlJsPromise: Promise<typeof initSqlJs> | null = null
+let sqlJsPromise: Promise<any> | null = null
 
 /**
  * Initializes sql.js in the browser by loading the WASM file.
  * This is cached so we only load it once.
  */
-async function initSqlJsBrowser(): Promise<typeof initSqlJs> {
+async function initSqlJsBrowser(): Promise<any> {
   if (sqlJsPromise) {
     return sqlJsPromise
   }
