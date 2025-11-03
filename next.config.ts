@@ -2,12 +2,20 @@ import type { NextConfig } from "next";
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  output: 'standalone',
   webpack: (config, { isServer }) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
 
-    // This is key for Vercel. By default, Next.js may externalize dependencies
-    // for server-side bundles. We need sql.js and its wasm file to be included.
+    // For client-side, we need to exclude Node.js modules that sql.js tries to import
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+      };
+    }
+
+    // For server-side (if we still need it), ensure sql.js is included
     if (isServer) {
         config.externals = (config.externals || []).filter(
             (external: any) => {
