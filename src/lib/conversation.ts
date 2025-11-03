@@ -51,8 +51,13 @@ export async function loadDatabase(
     // In a Vercel environment, process.cwd() points to the root of the deployment.
     // The postinstall script copies the wasm file to the `public` directory.
     const wasmPath = path.resolve(process.cwd(), "./public/sql-wasm.wasm")
-    const wasmBinary = await fs.readFile(wasmPath)
-    const SQL = await initSqlJs({ wasmBinary })
+    const wasmBinaryBuffer = await fs.readFile(wasmPath)
+    // Convert Buffer to ArrayBuffer for sql.js
+    const wasmArrayBuffer = wasmBinaryBuffer.buffer.slice(
+      wasmBinaryBuffer.byteOffset,
+      wasmBinaryBuffer.byteOffset + wasmBinaryBuffer.byteLength
+    ) as ArrayBuffer
+    const SQL = await initSqlJs({ wasmBinary: wasmArrayBuffer })
     return new SQL.Database(new Uint8Array(fileBuffer))
   } catch (error) {
     console.error("Database load error:", error)

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react"
-import { Check, Copy, Search, Filter, X, Download, Upload } from "lucide-react"
+import { Check, Copy, Search, Download, Upload } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -88,20 +88,6 @@ export default function HomePage() {
       extractFile(file)
     }
   }, [extractFile])
-
-  // Submit handler is now just for the form, but extraction happens automatically
-  const handleSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      if (!selectedFile) {
-        setError("Please choose a .vscdb file to continue")
-        return
-      }
-      // Auto-extraction already happens on file selection, but we can re-extract if needed
-      await extractFile(selectedFile)
-    },
-    [selectedFile, extractFile]
-  )
 
   const handleDownload = useCallback(
     (mode: "conversation" | "raw") => {
@@ -233,8 +219,6 @@ export default function HomePage() {
     const assistantMessages = result.messages.filter((message) => message.role === "assistant").length
     return `${result.messages.length} messages — ${userMessages} user, ${assistantMessages} assistant`
   }, [result])
-
-  const hasActiveFilters = searchQuery.trim() !== "" || roleFilter !== "all"
 
   // Track visible message using Intersection Observer (optimized)
   useEffect(() => {
