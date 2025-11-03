@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     // for server-side bundles. We need sql.js and its wasm file to be included.
     if (isServer) {
         config.externals = (config.externals || []).filter(
-            (external) => {
+            (external: any) => {
                 if (typeof external === 'string') {
                     return !external.startsWith('sql.js');
                 }
