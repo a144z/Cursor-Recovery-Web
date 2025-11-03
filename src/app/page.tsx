@@ -32,6 +32,12 @@ interface ExtractionResponse {
   details?: string
 }
 
+interface ConversationExtraction {
+  messages: ConversationMessage[]
+  raw: Record<string, unknown>
+  tables: string[]
+}
+
 export default function HomePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -51,18 +57,34 @@ export default function HomePage() {
     setIsExtracting(true)
     setError(null)
     try {
-      const formData = new FormData()
-      formData.append("file", file)
+      // Dynamically import client-side conversation extraction
+      const { loadDatabase, extractConversation } = await import("@/lib/conversation-client")
+      
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error("Uploaded file is empty")
+      }
 
-      const response = await fetch("/api/extract", {
-        method: "POST",
-        body: formData
-      })
+      // Load database and extract conversation - all in the browser!
+      const db = await loadDatabase(arrayBuffer)
+      let result: ConversationExtraction
+      
+      try {
+        result = extractConversation(db)
+      } finally {
+        // Always close the database to free memory
+        db.close()
+      }
 
-      const payload = (await response.json()) as ExtractionResponse
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to extract conversation")
+      // Format the result to match the expected interface
+      const payload: ExtractionResponse = {
+        filename: file.name,
+        extractedAt: new Date().toISOString(),
+        messages: result.messages,
+        raw: result.raw,
+        tables: result.tables,
       }
 
       setResult(payload)
@@ -71,6 +93,7 @@ export default function HomePage() {
     } catch (ex) {
       setResult(null)
       setError((ex as Error).message)
+      console.error("Extraction error:", ex)
     } finally {
       setIsExtracting(false)
     }
