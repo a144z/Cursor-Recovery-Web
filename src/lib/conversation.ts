@@ -1,6 +1,4 @@
 import initSqlJs, { type Database } from "sql.js"
-import path from "path"
-import fs from "fs/promises"
 
 // =================================================================================
 // Interfaces
@@ -38,34 +36,53 @@ const CONVERSATION_KEYS = [
 // Main Extraction Logic
 // =================================================================================
 
+// Cache for sql.js initialization
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sqlJsPromise: Promise<any> | null = null
+
 /**
- * Loads a SQLite database from an ArrayBuffer using sql.js.
- * This avoids native dependencies and is suitable for serverless environments.
+ * Initializes sql.js in the browser by loading the WASM file.
+ * This is cached so we only load it once.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function initSqlJsBrowser(): Promise<any> {
+  if (sqlJsPromise) {
+    return sqlJsPromise
+  }
+
+  sqlJsPromise = (async () => {
+    try {
+      // Load WASM file from public directory
+      const wasmResponse = await fetch("/sql-wasm.wasm")
+      if (!wasmResponse.ok) {
+        throw new Error(`Failed to fetch WASM file: ${wasmResponse.statusText}`)
+      }
+      const wasmBinary = await wasmResponse.arrayBuffer()
+      
+      // Initialize sql.js with the WASM binary
+      const SQL = await initSqlJs({ wasmBinary })
+      return SQL
+    } catch (error) {
+      sqlJsPromise = null // Reset on error so we can retry
+      throw error
+    }
+  })()
+
+  return sqlJsPromise
+}
+
+/**
+ * Loads a SQLite database from an ArrayBuffer using sql.js in the browser.
+ * This runs entirely client-side - no server needed!
  */
 export async function loadDatabase(
   fileBuffer: ArrayBuffer
-): Promise<initSqlJs.Database> {
+): Promise<Database> {
   try {
-    // In a Vercel serverless function, __dirname points to the bundled file's directory.
-    // The postinstall script copies the wasm file next to this source file.
-    const wasmPath = path.join(__dirname, "sql-wasm.wasm")
-    const wasmBinaryBuffer = await fs.readFile(wasmPath)
-
-    // Convert Buffer to ArrayBuffer for sql.js
-    const wasmArrayBuffer = wasmBinaryBuffer.buffer.slice(
-      wasmBinaryBuffer.byteOffset,
-      wasmBinaryBuffer.byteOffset + wasmBinaryBuffer.byteLength
-    ) as ArrayBuffer
-    const SQL = await initSqlJs({ wasmBinary: wasmArrayBuffer })
+    const SQL = await initSqlJsBrowser()
     return new SQL.Database(new Uint8Array(fileBuffer))
   } catch (error) {
     console.error("Database load error:", error)
-    // Add more context for debugging wasm file loading issues.
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      throw new Error(
-        "Failed to load sql-wasm.wasm. Ensure it's in the `src/lib` directory and the build process includes it."
-      )
-    }
     throw new Error(
       `Failed to load database: ${
         error instanceof Error ? error.message : String(error)
@@ -387,3 +404,4 @@ function tryParseJson(value: string): unknown {
   }
   return value
 }
+

@@ -58,7 +58,7 @@ export default function HomePage() {
     setError(null)
     try {
       // Dynamically import client-side conversation extraction
-      const { loadDatabase, extractConversation } = await import("@/lib/conversation-client")
+      const { loadDatabase, extractConversation } = await import("@/lib/conversation")
       
       // Read file as ArrayBuffer
       const arrayBuffer = await file.arrayBuffer()
@@ -684,9 +684,9 @@ const ConversationBubble = React.forwardRef<HTMLDivElement, ConversationBubblePr
           </div>
           
         </div>
-      </div>
+    </div>
     )
-  }
+}
 )
 
 ConversationBubble.displayName = "ConversationBubble"
